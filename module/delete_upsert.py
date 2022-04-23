@@ -46,20 +46,25 @@ def get_upsert_data(acc_from,
                     primary_key, 
                     list_insert_update_ids,
                     sync_columns):
+
+    chunksize = 1000
+    columns= '`'+'`,`'.join(sync_columns)+'`'
     
-    with pyjin.connectDB(**acc_from, engine_type='NullPool') as con:
-        pyjin.execute_query(con,"SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")            
-        df_upsert = pyjin.execute_query(con,
-                                        """
-                                        select {columns} from {db}.{table} where {primary_key} in :ids
-                                        """.format(columns= '`'+'`,`'.join(sync_columns)+'`',
-                                            db= db_from,
-                                            table=table_from,
-                                            primary_key=primary_key), 
-                                        ids=list_insert_update_ids,
-                                        output='df')                                 
-        pyjin.execute_query(con,"SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ")            
-    
+    with pyjin.connectDB(**acc_from) as con:
+                
+        list_df = []
+        for i in range(int(len(list_insert_update_ids) / chunksize)+1):
+            current_ids = list_insert_update_ids[i*chunksize:(i+1)*chunksize]
+
+            if len(current_ids):
+                ids = ','.join([str(i) for i in current_ids])
+                query = f" select {columns} from {db_from}.{table_from} where {primary_key} in ({ids})"                    
+                df_upsert= pd.read_sql(query, con=con)
+
+            if len(df_upsert):            
+                list_df.append(df_upsert)
+        
+        df_upsert = pd.concat(list_df, axis=0)    
     return df_upsert  
 
 
@@ -96,7 +101,7 @@ def delete_upsert(acc_to,
                 # update_id, insert_id 정보 업데이트 하기
                 if len(list_insert_update_ids):
                     pyjin.execute_query(con,"SET foreign_key_checks = 0")
-                    df_upsert.to_sql(table_to, con=con, schema=db_to, index=False, if_exists='append', chunksize=5000, method='multi')
+                    df_upsert.to_sql(table_to, con=con, schema=db_to, index=False, if_exists='append', chunksize=100, method='multi')
                     pyjin.execute_query(con,"SET foreign_key_checks = 1")
 
             pyjin.print_logging('{} (update), {} (insert) data inserted'.format(len(update_ids), len(insert_ids)))
