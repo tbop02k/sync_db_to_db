@@ -7,13 +7,13 @@ class Infor:
     table_list = []        
     
     table_list.append({
-        'acc_from' : ai.a_sql_info(),
-        'acc_to' : ai.b_sql_info(),
-        'db_from': 'db', # schema name you want to syncronize from
-        'table_from' : 'table_name', # table name you want to syncronize from
-        'db_to' : 'db', # schema name you want to syncronize to
-        'table_to' : 'rest_supplier', # table name you want to syncronize to
-        'primary_key' : 'table_name',
+        'acc_from' : ai.servicedb_sql_info(),
+        'acc_to' : ai.analdb_sql_info(),
+        'db_from': 'ople',
+        'table_from' : 'rest_product', # table name you want to syncronize from
+        'db_to' : 'ople', # schema name you want to syncronize to
+        'table_to' : 'rest_product', # table name you want to syncronize to
+        'primary_key' : 'id',
         'update_date_col' : 'update_date' # datetime field for update criterion
     })
             
